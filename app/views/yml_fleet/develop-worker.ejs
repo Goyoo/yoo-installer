@@ -1,0 +1,28 @@
+#cloud-config
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+coreos:
+  fleet:
+    etcd_servers: "http://<%= developEtcdHost %>:4001"
+  units:
+    - name: fleet.service
+      command: start
+write_files:
+  - path: /etc/profile.d/etcdctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      # configure etcdctl to work with our etcd servers set above
+      export ETCDCTL_PEERS="http://<%= developEtcdHost %>:4001"
+  - path: /etc/profile.d/fleetctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      # configure fleetctl to work with our etcd servers set above
+      export FLEETCTL_ENDPOINT=unix:///var/run/fleet.sock
+      export FLEETCTL_EXPERIMENTAL_API=true
+
+

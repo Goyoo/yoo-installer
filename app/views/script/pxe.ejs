@@ -1,0 +1,38 @@
+#!/bin/bash
+## http://127.0.0.1/config/production-central/pxe.sh
+## http://127.0.0.1/config/*/pxe.sh
+# version 0.0.2
+
+#set -e
+
+## welcome page
+
+clear ;
+echo "Starting to Install" >/dev/tty1
+sleep 2
+
+## main process part
+sudo ntpdate -u cn.pool.ntp.org
+sudo parted /dev/sda --script mklabel gpt  mkpart primary ext4 0% 100%
+sudo mkfs.ext4  -t ext4 -b 4096 /dev/sda1
+wget 'http://<%= httpHost %>/config/<%= type%>/config.yml' -O /tmp/cloud-config.yml
+echo "sudo coreos-install -d /dev/sda -b 'http://<%= httpHost %>/amd64-usr' -c /tmp/cloud-config.yml "> /tmp/reinstall.sh
+sudo coreos-install -d /dev/sda -b 'http://<%= httpHost %>/amd64-usr' -c /tmp/cloud-config.yml -v 1>/dev/tty1 2>/dev/tty1
+echo "Install CoreOS Into HDD Done!" >/dev/tty1
+echo "start download k8s files..." >/dev/tty1
+#sudo mount -o subvol=root /dev/sda9 /mnt/
+sudo mount -t ext4 /dev/sda9 /mnt/
+sudo mkdir -p /mnt/opt/bin/
+sudo wget -O /mnt/opt/bin/kubectl 'http://<%= httpHost %>/kube/bin/kubectl'
+sudo wget -O /mnt/opt/bin/kube-apiserver 'http://<%= httpHost %>/kube/bin/kube-apiserver'
+sudo wget -O /mnt/opt/bin/kube-controller-manager 'http://<%= httpHost %>/kube/bin/kube-controller-manager'
+sudo wget -O /mnt/opt/bin/kube-proxy 'http://<%= httpHost %>/kube/bin/kube-proxy'
+sudo wget -O /mnt/opt/bin/kube-register 'http://<%= httpHost %>/kube/bin/kube-register'
+sudo wget -O /mnt/opt/bin/kube-scheduler 'http://<%= httpHost %>/kube/bin/kube-scheduler'
+sudo wget -O /mnt/opt/bin/kubelet 'http://<%= httpHost %>/kube/bin/kubelet'
+sudo wget -O /mnt/opt/bin/setup-network-environment 'http://<%= httpHost %>/kube/bin/setup-network-environment'
+sudo wget -O /mnt/opt/bin/wupiao 'http://<%= httpHost %>/kube/bin/wupiao'
+sudo chmod +x /mnt/opt/bin/*
+echo "Finish download k8s files!" >/dev/tty1
+echo "All Done" >/dev/tty1
+sudo reboot

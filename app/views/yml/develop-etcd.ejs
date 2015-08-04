@@ -1,0 +1,24 @@
+#cloud-config
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+coreos:
+  etcd:
+    addr: <%= developEtcdHost %>:4001
+  units:
+    - name: etcd.service
+      command: start
+    - name: 00-en0.network
+      runtime: true
+      content: |
+        [Match]
+        Name=en*
+
+        [Network]
+        DNS=114.114.114.114
+        Address=<%= developEtcdHost %>/24
+        Gateway=<%= developEtcdGateway %>
+
+

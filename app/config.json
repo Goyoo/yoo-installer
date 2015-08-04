@@ -1,0 +1,14 @@
+{
+    "sshAuthorizedKeys": [
+        "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzSMv2Zv9lZtsd+YQCAdqr2zcCJCNP31tnxKvFquVokoVPljR5DzX8qpKkoJhHMP74lTxUlXT6JQdV3dRWa44AVrKqcQqtRx4L/9a7Yy+ntbz0AuSgtQQ9IemmplCUIf3Nq8Qe+5vrRJJYl4k+4kaxOgCxrSoPcp+yJh+tBaRAwWeykW4LJeCo/POl6rzai+/MAp8kl6RDjUXGtg67uQaJS0UvS8nVBuoAdxXfTMsSven3DCDEGHlqxhK74Lb2jYgsdmLv0416Wnooqran1wQDdDEcs9uhAGWeQM90cdYf191aAo3hLJrguLYHiCtiaLegIjvQgfnWDOGIGeE+vxG3 wptad@tom.com"
+    ],
+    "httpHost": "192.168.8.10",
+    "discoveryURL": "https://discovery.etcd.io/e055d84e0207475ad941e087da1c88ce",
+    "developEtcdHost": "192.168.8.60",
+    "developEtcdGateway": "192.168.8.1",
+    "productionEtcdGateway": "192.168.8.1",
+    "productionEtcdServices2379": "http://192.168.1.50:2379,http://192.168.1.51:2379,http://192.168.1.52:2379",
+    "productionEtcdServices2380":  "http://192.168.1.50:2380,http://192.168.1.51:2380,http://192.168.1.52:2380",
+    "productionK8sMasterIP": "192.168.1.11",
+    "productionDns": "114.114.114.114"
+}

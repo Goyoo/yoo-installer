@@ -1,0 +1,28 @@
+#cloud-config
+## static file
+hostname: coreos
+ssh_authorized_keys:
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQCzSMv2Zv9lZtsd+YQCAdqr2zcCJCNP31tnxKvFquVokoVPljR5DzX8qpKkoJhHMP74lTxUlXT6JQdV3dRWa44AVrKqcQqtRx4L/9a7Yy+ntbz0AuSgtQQ9IemmplCUIf3Nq8Qe+5vrRJJYl4k+4kaxOgCxrSoPcp+yJh+tBaRAwWeykW4LJeCo/POl6rzai+/MAp8kl6RDjUXGtg67uQaJS0UvS8nVBuoAdxXfTMsSven3DCDEGHlqxhK74Lb2jYgsdmLv0416Wnooqran1wQDdDEcs9uhAGWeQM90cdYf191aAo3hLJrguLYHiCtiaLegIjvQgfnWDOGIGeE+vxG3 wptad@tom.com_config
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDvGKyeyJXYFtxgMOGpEu40ZU5tRYS2nx4oRh292gFSb0Bgv1YQymd196w7G7LcY+Bj/wuC5sgWP7GYkUiwDQrk6REFMrdUwNtt+H/ChFxVYuwPTjiUCW97c09J0/j8mo5M6d5ojdZmyfEjrICPjxVA1jKzoiyHbwwTj0IkZEKGnMlB5gvpRJALXvg2Skn0Bnla6Fwsyo5eZNt0zvgjenDuu1Y6k/+KrVXpBnR4Way+xremm3Ru8WN9OdQQ94N6IS75II7Poad4mx0XU/Qn1baqpeBiTzYaeHYA1hjRCMGVq2SEesq8vT1jT74IPDNdzxkOgmoPHz+jlozj5Q9UQ8fz junjun16818@localhost
+  - ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQC4dm5koFE/VmLmqSh9zifDcRz48tU5ZH8msA3gwJ3k3BMdwqKgaKvp+tc7s6s/PjJ5qgvOPPGH2wlpCY6Pw297ntMhLDPqKh9JmkLEnk3yon7KM6cubUnE1SxsKxupXpaBti3X33/7L1GisUnEFteWB94cd6L0wsNEevvXJpneDJp5pFEEwnk9f0J/y8QuqMoFRAONd5jA/MErD0MZuEI7rnwbzMtOUqxpt3yDbvi+3d/abtk/MHu4PgIJTG4vAPnqKDWOhfKQrPACHQkerO+1YI0yta0lrO1N0aW8z3F551EjdyBU0rDNBzGSMjtvBrudZm5MAB/HFldoRg6R37mR zhaoruixiong@goyoo.com
+coreos:
+  etcd:
+    name: coreos
+    discovery: https://discovery.etcd.io/e055d84e0207475ad941e087da1c88ce
+    addr: $public_ipv4:4001
+    peer-addr: $private_ipv4:7001
+  fleet:
+    public-ip: $public_ipv4
+    metadata: region=beijing
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+users:
+  - name: tad
+    passwd: $1$.QVANJwv$kyRrcVfTcUBTN4RDQ8SRJ.
+    groups:
+      - sudo
+      - docker
+

@@ -1,0 +1,59 @@
+#cloud-config
+
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+coreos:
+  etcd:
+    discovery: <%= discoveryURL %>
+    addr: <%= requestIP %>:4001
+    peer-addr: <%= requestIP %>:7001
+  fleet:
+    metadata: "role=services,cabinet=one"
+#  update:
+#    # CoreUpdate group ID for "Production Central Services"
+#    group: 9e98ecae-4623-48c1-9679-423549c44da6
+#    server: https://customer.update.core-os.net/v1/update/
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
+
+write_files:
+  - path: /etc/ssh/sshd_config
+    permissions: 0600
+    owner: root:root
+    content: |
+      # Use most defaults for sshd configuration.
+      UsePrivilegeSeparation sandbox
+      Subsystem sftp internal-sftp
+      ClientAliveInterval 180
+      UseDNS no
+      PermitRootLogin no
+  - path: /etc/systemd/network/10-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp3s0f0
+
+      [Network]
+      DHCP=no
+      Address=<%= requestIP %>/24
+      Gateway=<%= productionEtcdGateway %>
+      DNS=<%= productionDns%>
+  - path: /etc/systemd/network/20-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp*
+
+      [Network]
+      DHCP=no
+users:
+  - name: root
+    passwd: $1$bv0BV36Z$pta16wX4w9GgUiwFtKsuN.

@@ -1,0 +1,143 @@
+#cloud-config
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+write-files:
+  - path: /opt/bin/wupiao
+    permissions: '0755'
+    content: |
+      #!/bin/bash
+      # [w]ait [u]ntil [p]ort [i]s [a]ctually [o]pen
+      [ -n "$1" ] && [ -n "$2" ] && while ! curl --output /dev/null \
+        --silent --head --fail \
+        http://${1}:${2}; do sleep 1 && echo -n .; done;
+      exit $?
+  - path: /etc/resolv.conf
+    permissions: 0644
+    owner: root
+    content: |
+      search localhost
+      nameserver 10.11.1.1
+  - path: /etc/ssh/sshd_config
+    permissions: 0600
+    owner: root:root
+    content: |
+      # Use most defaults for sshd configuration.
+      UsePrivilegeSeparation sandbox
+      Subsystem sftp internal-sftp
+      ClientAliveInterval 180
+      UseDNS no
+      PermitRootLogin no
+  - path: /etc/systemd/system/update-engine.service.d/proxy.conf
+    permissions: 0644
+    owner: root
+    content: |
+      [Service]
+      Environment=ALL_PROXY=socks5://admin-proxy-server:8080
+  - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    permissions: 0644
+    owner: root
+    content: |
+      [Service]
+      Environment='DOCKER_OPTS=--registry-mirror=https://docker.yunpro.cn'
+  - path: /etc/systemd/network/10-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp3s0f0
+
+      [Network]
+      DHCP=no
+      Address=<%= requestIP %>/24
+      Gateway=<%= productionEtcdGateway %>
+      DNS=<%= productionDns%>
+  - path: /etc/systemd/network/20-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp*
+
+      [Network]
+      DHCP=no
+
+
+coreos:
+  etcd2:
+    listen-client-urls: "http://0.0.0.0:2379"
+    advertise-client-urls: "http://0.0.0.0:2379"
+    initial-cluster: "master=<%= productionEtcdServices2380 %>"
+    proxy: on
+    data-dir: /var/lib/etcd2
+  fleet:
+    metadata: "role=worker,cabinet=three,disk=hdd"
+  units:
+    - name: etcd2.service
+      command: start
+    - name: fleet.service
+      command: start
+    - name: flanneld.service
+      command: start
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Unit]
+            Requires=etcd2.service
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16", "Backend": {"Type": "vxlan"}}'
+    - name: docker.service
+      command: start
+    - name: setup-network-environment.service
+      command: start
+      content: |
+        [Unit]
+        Description=Setup Network Environment
+        Documentation=https://github.com/kelseyhightower/setup-network-environment
+        Requires=network-online.target
+        After=network-online.target
+        [Service]
+        ExecStart=/opt/bin/setup-network-environment
+        RemainAfterExit=yes
+        Type=oneshot
+    - name: kube-proxy.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes Proxy
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Requires=setup-network-environment.service
+        After=setup-network-environment.service
+        [Service]
+        # wait for kubernetes master to be up and ready
+        ExecStartPre=/opt/bin/wupiao <%= productionK8sMasterIP %> 8080
+        ExecStart=/opt/bin/kube-proxy \
+        --master=<%= productionK8sMasterIP %>:8080 \
+        --logtostderr=true
+        Restart=always
+        RestartSec=10
+    - name: kube-kubelet.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes Kubelet
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Requires=setup-network-environment.service
+        After=setup-network-environment.service
+        [Service]
+        EnvironmentFile=/etc/network-environment
+        # wait for kubernetes master to be up and ready
+        ExecStartPre=/opt/bin/wupiao <%= productionK8sMasterIP %> 8080
+        ExecStart=/opt/bin/kubelet \
+        --address=0.0.0.0 \
+        --port=10250 \
+        --hostname_override=<%= requestIP %> \
+        --api_servers=<%= productionK8sMasterIP %>:8080 \
+        --allow_privileged=true \
+        --logtostderr=true \
+        --healthz_bind_address=0.0.0.0 \
+        --healthz_port=10248
+        Restart=always
+        RestartSec=10

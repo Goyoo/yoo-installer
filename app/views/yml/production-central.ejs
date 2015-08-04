@@ -1,0 +1,178 @@
+#cloud-config
+
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+coreos:
+  update:
+    group: stable
+    reboot-strategy: off
+  fleet:
+    metadata: "role=coreos-master"
+  units:
+    - name: etcd2.service
+      command: start
+    - name: setup-network-environment.service
+      command: start
+      content: |
+        [Unit]
+        Description=Setup Network Environment
+        Documentation=https://github.com/kelseyhightower/setup-network-environment
+        Requires=network-online.target
+        After=network-online.target
+        [Service]
+        ExecStart=/opt/bin/setup-network-environment
+        RemainAfterExit=yes
+        Type=oneshot
+    - name: fleet.service
+      command: start
+    - name: flanneld.service
+      command: start
+      drop-ins:
+        - name: 50-network-config.conf
+          content: |
+            [Unit]
+            Requires=etcd2.service
+            [Service]
+            ExecStartPre=/usr/bin/etcdctl set /coreos.com/network/config '{"Network":"10.244.0.0/16", "Backend": {"Type": "vxlan"}}'
+    - name: docker.service
+      content: |
+        [Unit]
+        Description=Docker Application Container Engine
+        Documentation=http://docs.docker.com
+        After=docker.socket early-docker.target network.target
+        Requires=docker.socket early-docker.target
+        [Service]
+        Environment=TMPDIR=/var/tmp
+        EnvironmentFile=-/run/flannel_docker_opts.env
+        EnvironmentFile=/etc/network-environment
+        MountFlags=slave
+        LimitNOFILE=1048576
+        LimitNPROC=1048576
+        ExecStart=/usr/lib/coreos/dockerd --daemon --host=fd:// --registry-mirror=http://docker.yunpro.cn $DOCKER_OPT_BIP $DOCKER_OPT_MTU $DOCKER_OPT_IPMASQ
+        [Install]
+        WantedBy=multi-user.target
+      drop-ins:
+        - name: 51-docker-mirror.conf
+          content: |
+            [Unit]
+            # making sure that docker-cache is up and that flanneld finished
+            # startup, otherwise containers won't land in flannel's network...
+            Requires=flanneld.service
+            After=flanneld.service
+    - name: kube-apiserver.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes API Server
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Requires=etcd2.service setup-network-environment.service
+        After=etcd2.service setup-network-environment.service
+        [Service]
+        EnvironmentFile=/etc/network-environment
+        ExecStart=/opt/bin/kube-apiserver \
+        --allow_privileged=true \
+        --insecure_bind_address=0.0.0.0 \
+        --insecure_port=8080 \
+        --kubelet_https=true \
+        --secure_port=6443 \
+        --service-cluster-ip-range=10.100.0.0/16 \
+        --etcd_servers=http://127.0.0.1:2379 \
+        --public_address_override=<%= requestIP %> \
+        --logtostderr=true
+        Restart=always
+        RestartSec=10
+    - name: kube-controller-manager.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes Controller Manager
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Requires=kube-apiserver.service
+        After=kube-apiserver.service
+        [Service]
+        ExecStart=/opt/bin/kube-controller-manager \
+        --master=127.0.0.1:8080 \
+        --logtostderr=true
+        Restart=always
+        RestartSec=10
+    - name: kube-scheduler.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes Scheduler
+        Documentation=https://github.com/GoogleCloudPlatform/kubernetes
+        Requires=kube-apiserver.service
+        After=kube-apiserver.service
+        [Service]
+        ExecStart=/opt/bin/kube-scheduler --master=127.0.0.1:8080
+        Restart=always
+        RestartSec=10
+    - name: kube-register.service
+      command: start
+      content: |
+        [Unit]
+        Description=Kubernetes Registration Service
+        Documentation=https://github.com/kelseyhightower/kube-register
+        Requires=kube-apiserver.service
+        After=kube-apiserver.service
+        Requires=fleet.service
+        After=fleet.service
+        [Service]
+        ExecStart=/opt/bin/kube-register \
+        --metadata=role=node \
+        --fleet-endpoint=unix:///var/run/fleet.sock \
+        --api-endpoint=http://127.0.0.1:8080 \
+        --healthz-port=10248
+        Restart=always
+        RestartSec=10
+write_files:
+  - path: /etc/resolv.conf
+    permissions: 0644
+    owner: root
+    content: |
+      search localhost
+      nameserver 10.11.1.1
+  - path: /etc/ssh/sshd_config
+    permissions: 0600
+    owner: root:root
+    content: |
+      # Use most defaults for sshd configuration.
+      UsePrivilegeSeparation sandbox
+      Subsystem sftp internal-sftp
+      ClientAliveInterval 180
+      UseDNS no
+      PermitRootLogin no
+  - path: /etc/systemd/system/update-engine.service.d/proxy.conf
+    permissions: 0644
+    owner: root
+    content: |
+      [Service]
+      Environment=ALL_PROXY=socks5://admin-proxy-server:8080
+  - path: /etc/systemd/system/docker.service.d/50-insecure-registry.conf
+    permissions: 0644
+    owner: root
+    content: |
+      [Service]
+      Environment='DOCKER_OPTS=--registry-mirror=https://docker.yunpro.cn'
+  - path: /etc/systemd/network/10-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp3s0f0
+      [Network]
+      DHCP=no
+      Address=<%= requestIP %>/24
+      Gateway=<%= productionEtcdGateway %>
+      DNS=<%= productionDns%>
+  - path: /etc/systemd/network/20-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp*
+      [Network]
+      DHCP=no

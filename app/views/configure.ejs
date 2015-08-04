@@ -1,0 +1,66 @@
+<section class="content-header">
+	<h1>
+		Configuration
+	</h1>
+	<ol class="breadcrumb">
+		<li><a href="/"><i class="fa fa-dashboard"></i> Configure</a></li>
+
+	</ol>
+</section>
+
+<!-- Main content -->
+<section class="content">
+	<div class="row">
+		<% if(typeof error !== 'undefined'){ %>
+		<div class="callout callout-danger">
+			<h4>Error!</h4>
+
+			<p><%= error %></p>
+		</div>
+		<% } %>
+
+		<% if(typeof success !== 'undefined'){ %>
+		<div class="callout callout-success">
+			<h4>success</h4>
+
+			<p>Saved.</p>
+		</div>
+		<% } %>
+
+		<div class="box box-success">
+			<form action="/configure/save" method="POST">
+				<div class="box-header with-border">
+					<h3 class="box-title"></h3>
+				</div>
+				<div class="box-body">
+					<textarea class="form-control input-lg" name="json" type="text" placeholder="{}"
+							  style="height:400px;font-size:12px;"><%= json %></textarea>
+				</div>
+				<!-- /.box-body -->
+				<div class="box-footer">
+					<button type="submit" class="btn btn-primary">Submit</button>
+				</div>
+			</form>
+		</div>
+		<!-- /.box -->
+	</div>
+</section>
+
+<script>
+	$(document).delegate('textarea', 'keydown', function (e) {
+		var keyCode = e.keyCode || e.which;
+
+		if (keyCode == 9) {
+			e.preventDefault();
+			var start = $(this).get(0).selectionStart;
+			var end = $(this).get(0).selectionEnd;
+
+			$(this).val($(this).val().substring(0, start)
+			+ "    "
+			+ $(this).val().substring(end));
+
+			$(this).get(0).selectionStart =
+					$(this).get(0).selectionEnd = start + 4;
+		}
+	});
+</script>

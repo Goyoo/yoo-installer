@@ -1,0 +1,18 @@
+#cloud-config
+## PXE cloud config file
+## http://127.0.0.1/config/production-central/pxe.yml
+## http://127.0.0.1/config/*/pxe.yml
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+coreos:
+  units:
+    - name: setup.service
+      command: start
+      content: |
+        [Unit]
+        Description=setup service
+        [Service]
+        TimeoutStartSec=0
+        ExecStart=/bin/sh -c "echo 'started'>> /tmp/test.log;sleep 5; curl -sL http://<%= httpHost%>/config/<%= type%>/pxe.sh | sudo bash -"

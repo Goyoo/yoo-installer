@@ -1,0 +1,66 @@
+#cloud-config
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+
+coreos:
+  fleet:
+    metadata: "role=worker,cabinet=two,disk=spinning"
+    etcd_servers: "<%= productionEtcdServices %>"
+  locksmith:
+    endpoint: "<%= productionEtcdServices %>"
+  units:
+    - name: etcd.service
+      mask: true
+    - name: fleet.service
+      command: start
+
+write_files:
+  - path: /etc/profile.d/etcdctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      export ETCDCTL_PEERS="<%= productionEtcdServices %>"
+  - path: /etc/profile.d/fleetctl.sh
+    permissions: 0644
+    owner: core
+    content: |
+      export FLEETCTL_ENDPOINT=unix:///var/run/fleet.sock
+      export FLEETCTL_EXPERIMENTAL_API=true
+  - path: /etc/ssh/sshd_config
+    permissions: 0600
+    owner: root:root
+    content: |
+      # Use most defaults for sshd configuration.
+      UsePrivilegeSeparation sandbox
+      Subsystem sftp internal-sftp
+      ClientAliveInterval 180
+      UseDNS no
+      PermitRootLogin no
+  - path: /etc/systemd/network/10-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp3s0f0
+
+      [Network]
+      DHCP=no
+      Address=<%= requestIP %>/24
+      Gateway=<%= productionEtcdGateway %>
+      DNS=<%= productionDns%>
+  - path: /etc/systemd/network/20-enp0.network
+    permissions: 0644
+    owner: root
+    content: |
+      [Match]
+      Name=enp*
+
+      [Network]
+      DHCP=no
+
+users:
+  - name: root
+    passwd: $1$bv0BV36Z$pta16wX4w9GgUiwFtKsuN.

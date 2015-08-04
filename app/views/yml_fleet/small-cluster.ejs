@@ -1,0 +1,19 @@
+#cloud-config
+hostname: <%= hostname%>
+ssh_authorized_keys:
+<% sshAuthorizedKeys.forEach(function(key){%>  - <%= key%>
+<%})%>
+
+coreos:
+  etcd:
+    discovery: <%= discoveryURL %>
+    addr: <%= requestIP %>:4001
+    peer-addr: <%= requestIP %>:7001
+  fleet:
+    public-ip: <%= requestIP %>
+    metadata: region=beijing
+  units:
+    - name: etcd.service
+      command: start
+    - name: fleet.service
+      command: start
