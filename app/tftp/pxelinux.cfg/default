@@ -1,0 +1,41 @@
+default boot-screens/vesamenu.c32
+
+prompt 0
+
+display boot.msg
+
+menu title Yoo Cloud - CoreOS Installer!
+
+label CoreOS Install for Single Machine
+#  menu default
+#  timeout 100
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/simple/pxe.yml
+
+label CoreOS Install for Small Cluster
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/small-cluster/pxe.yml
+
+label CoreOS Install for Development Cluster - Etcd Machine
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/develop-etcd/pxe.yml
+
+label CoreOS Install for Development Cluster - Worker
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/develop-worker/pxe.yml
+
+label CoreOS Install for Production Cluster - Central Service
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/production-central/pxe.yml coreos.autologin=tty1
+
+label CoreOS Install for Production Cluster - Worker
+  menu default
+  timeout 100
+  menu lable Linux
+  kernel coreos-installer/coreos_production_pxe.vmlinuz
+  append initrd=coreos-installer/coreos_production_pxe_image.cpio.gz cloud-config-url=http://10.12.1.55/config/production-worker/pxe.yml  coreos.autologin=tty1
