@@ -35,4 +35,5 @@ sudo wget -O /mnt/opt/bin/wupiao 'http://<%= httpHost %>/kube/bin/wupiao'
 sudo chmod +x /mnt/opt/bin/*
 echo "Finish download k8s files!" >/dev/tty1
 echo "All Done" >/dev/tty1
+curl -sL http://<%= httpHost%>/notify/finish
 sudo reboot
