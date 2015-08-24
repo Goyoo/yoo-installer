@@ -2,3 +2,4 @@ app/tftp/coreos-installer
 app/node_modules
 app/public/amd64-usr
 app/public/kube
+test
